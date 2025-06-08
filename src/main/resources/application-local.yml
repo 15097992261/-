@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: ai-agent
+  #数据库配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/ai-agent?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true&useSSL=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: admin123
+  ai:
+    dashscope:
+      api-key: sk-42862037dcf1444a8dfdc76a382458e4
+      chat:
+        options:
+          model: qwen-plus
+
+
+
