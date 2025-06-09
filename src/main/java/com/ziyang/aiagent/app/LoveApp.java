@@ -1,9 +1,12 @@
 package com.ziyang.aiagent.app;
 
-import com.google.errorprone.annotations.Var;
+
 import com.ziyang.aiagent.advisor.ContentFilterAdvisor;
 import com.ziyang.aiagent.advisor.MyLoggerAdvisor;
 import com.ziyang.aiagent.chatmemory.FileBasedChatMemory;
+
+
+import com.ziyang.aiagent.chatmemory.MySQLChatMemory;
 
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -11,14 +14,18 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 
 import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.aop.Advisor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.Map;
 
 
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY;
@@ -40,16 +47,15 @@ public class LoveApp {
 //    @Value("classpath:/prompts/system-message.st")
 //    private Resource systemResource;
 //    SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(systemResource);
-//    Message systemMessage = systemPromptTemplate.createMessage(Map.of());
 
     record LoveReport(String title, List<String> suggestions) {
     }
 
 
-    public LoveApp(ChatModel dashscopeChatModel) {
+    public LoveApp(ChatModel dashscopeChatModel , MySQLChatMemory chatMemory) {
         //初始化基于文件的对话记忆
-        String fileDir = System.getProperty("user.dir") + "/chat-memory";
-        ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
+//        String fileDir = System.getProperty("user.dir") + "/chat-memory";
+//        ChatMemory chatMemory = new FileBasedChatMemory(fileDir);
         // 初始化基于内存的对话记忆
 //        ChatMemory chatMemory = new InMemoryChatMemory();
         chatClient = ChatClient.builder(dashscopeChatModel)
@@ -81,6 +87,20 @@ public class LoveApp {
         return content;
     }
 
+    public LoveReport doChatWithReport(String message, String chatId) {
+        LoveReport loveReport = chatClient
+                .prompt()
+                .system(SYSTEM_PROMPT + "每次对话后都要生成恋爱结果，标题为{用户名}的恋爱报告，内容为建议列表")
+                .user(message)
+                .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
+                        .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                .call()
+                .entity(LoveReport.class);
+        log.info("loveReport: {}", loveReport);
+        return loveReport;
+    }
+
+
     @Resource
     private Advisor loveAppRagCloudAdvisor;
 
@@ -93,7 +113,7 @@ public class LoveApp {
                 // 开启日志，便于观察效果
                 .advisors(new MyLoggerAdvisor())
                 // 应用增强检索服务（云知识库服务）
-//                .advisors(loveAppRagCloudAdvisor)
+               .advisors(loveAppRagCloudAdvisor)
                 .call()
                 .chatResponse();
         String content = chatResponse.getResult().getOutput().getText();
