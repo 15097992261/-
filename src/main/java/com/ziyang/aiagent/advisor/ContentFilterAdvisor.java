@@ -1,6 +1,7 @@
 package com.ziyang.aiagent.advisor;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.github.houbb.sensitive.word.core.SensitiveWordHelper;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.ai.chat.client.advisor.api.*;
@@ -22,12 +23,6 @@ import java.util.Set;
 @Slf4j
 public class ContentFilterAdvisor implements CallAroundAdvisor, StreamAroundAdvisor {
 
-    // 违禁词列表（实际项目中可以从数据库或配置中心加载）
-    private final Set<String> bannedWords = Set.of(
-        "暴力", "色情", "赌博", "毒品", "诈骗", 
-        "政治敏感词1", "政治敏感词2" // 替换为实际需要过滤的词汇
-    );
-
     @Override
     public String getName() {
         return this.getClass().getSimpleName();
@@ -46,7 +41,7 @@ public class ContentFilterAdvisor implements CallAroundAdvisor, StreamAroundAdvi
         if (StringUtils.isEmpty(text)) {
             return false;
         }
-        return bannedWords.stream().anyMatch(text::contains);
+        return SensitiveWordHelper.contains(text);
     }
 
     /**
@@ -56,7 +51,7 @@ public class ContentFilterAdvisor implements CallAroundAdvisor, StreamAroundAdvi
         log.warn("检测到违禁内容: {}", message);
         // 创建一个 ChatResponse 对象
         ChatResponse chatResponse = new ChatResponse(
-                List.of( new Generation(new AssistantMessage("您的输入或AI响应中包含违禁词，请修改后重试。"))),
+                List.of( new Generation(new AssistantMessage("您的输入或AI响应中包含违禁词"+SensitiveWordHelper.findAll(message)))),
                 new ChatResponseMetadata()
         );
         // 返回包含 ChatResponse 的 AdvisedResponse
@@ -70,7 +65,7 @@ public class ContentFilterAdvisor implements CallAroundAdvisor, StreamAroundAdvi
     @Override
     public AdvisedResponse aroundCall(AdvisedRequest request, CallAroundAdvisorChain chain) {
         // 检查用户输入
-        if (containsBannedWords(request.userText())) {
+        if (containsBannedWords(request.userText())){
             return handleViolation("用户输入包含违禁词: " + request.userText());
         }
 

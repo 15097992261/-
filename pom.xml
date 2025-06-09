@@ -98,6 +98,13 @@
             <artifactId>kryo</artifactId>
             <version>5.6.2</version>
         </dependency>
+<!--Gituhb开源的敏感词工具类sensitive-word-->
+        <dependency>
+            <groupId>com.github.houbb</groupId>
+            <artifactId>sensitive-word</artifactId>
+            <version>0.26.0</version>
+        </dependency>
+
 
     </dependencies>
 
